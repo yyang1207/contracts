@@ -66,6 +66,16 @@ $ cast --help
 ```
 
 
+### 单元测试
+```shell
+$ forge test --match-path "tests/Counter.t.sol"
+
+
+### 代码覆盖率
+```shell
+$ forge coverage --match-path "contracts/MyDevote.sol"
+
+
 ### vm作弊码
 #### 1. 异常
 vm.expectRevert();
@@ -77,3 +87,15 @@ vm.roll(1500);
 #### 3. 指定msg.sender
 vm.startPrank(user);
 vm.stopPrank();
+
+#### 4. 添加余额
+vm.deal(user, 10);
+
+
+### slither
+slither src/MyDevote.sol --config-file slither.json
+
+
+
+### mythril
+myth -x src/MyDevote.sol -o json > mythril.json
