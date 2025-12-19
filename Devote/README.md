@@ -69,12 +69,12 @@ $ cast --help
 ### 单元测试
 ```shell
 $ forge test --match-path "tests/Counter.t.sol"
-
+```
 
 ### 代码覆盖率
 ```shell
 $ forge coverage --match-path "contracts/MyDevote.sol"
-
+```
 
 ### vm作弊码
 #### 1. 异常
@@ -93,9 +93,19 @@ vm.deal(user, 10);
 
 
 ### slither
-slither src/MyDevote.sol --config-file slither.json
-
+基本用法
+```shell
+$ slither src/MyDevote.sol
+```
 
 
 ### mythril
-myth -x src/MyDevote.sol -o json > mythril.json
+基本用法
+```shell
+$ myth -x src/MyDevote.sol
+```
+
+使用配置文件
+```shell
+myth -x src/MyDevote.sol --config myth-config.json -o json > mythril.json
+```

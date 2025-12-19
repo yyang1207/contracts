@@ -1,0 +1,4 @@
+{
+    "filter_paths": "node_modules,lib",
+    "detectors_to_exclude": ["low-level-calls","different-pragma","naming-convention"]
+}
