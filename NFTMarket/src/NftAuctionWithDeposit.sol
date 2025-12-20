@@ -8,6 +8,12 @@ import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol
 
 contract NftAuctionWithDeposit is INftAuction,IERC721Receiver, ReentrancyGuard 
 {
+    struct BidInfo
+    {
+        address bidder;
+        uint256 price;
+        uint256 bidDeadline;
+    }
 
     enum AuctionStatus {
         Active,      // 0
@@ -22,9 +28,11 @@ contract NftAuctionWithDeposit is INftAuction,IERC721Receiver, ReentrancyGuard
         uint256 tokenId;
         uint256 startLine;
         uint256 bidDeadline;
-        uint256 settleDeadline;
         uint128 startingPrice;
+        uint16 settleDuration;
         uint16 depositRatio;
+        uint16 cutDownDuration;
+        uint16 minIncreamentRatio;
         AuctionStatus status;
     }
 
@@ -37,12 +45,19 @@ contract NftAuctionWithDeposit is INftAuction,IERC721Receiver, ReentrancyGuard
     uint16 public immutable MAX_DEPOSIT_RATIO; // 30%
     uint16 public immutable MIN_DEPOSIT_RATIO; // 10%
 
-    error NotInAuctionPeriod();
-    error DepositTooSmall();
+    
+
     error InvalidDepositRatio();
     error InvalidLockDuration();
     error InvalidBidDuration();
     error InvalidSettleDuration();
+    error InvalidCutdownDuration();
+    error InvalidIncreamentRatio();
+    error CannotConsecutiveBid();
+
+    error BidCutdownFinished();
+    error DepositTooSmall();
+    error NotInAuctionPeriod();
     
     error RefundFailed();
     error DepositTransferFailed();
@@ -89,8 +104,10 @@ contract NftAuctionWithDeposit is INftAuction,IERC721Receiver, ReentrancyGuard
         uint128 initPrice,
         uint256 lockDuration,
         uint256 bidDuration,
-        uint256 settleDuration,
-        uint16 depositRatio
+        uint16 settleDuration,
+        uint16 depositRatio,
+        uint16 cutDown,
+        uint16 increament
     ) external returns (bool) {
         if (initPrice <= 0) revert InvalidPrice();
 
@@ -98,6 +115,8 @@ contract NftAuctionWithDeposit is INftAuction,IERC721Receiver, ReentrancyGuard
         if (lockDuration < 50) revert InvalidLockDuration();
         if (bidDuration < 1800) revert InvalidBidDuration();
         if (settleDuration<300) revert InvalidSettleDuration();
+        if(cutDown<50) revert InvalidCutdownDuration();
+        if(increament<5) revert InvalidIncreamentRatio();
 
         if (depositRatio < MIN_DEPOSIT_RATIO || depositRatio > MAX_DEPOSIT_RATIO) revert  InvalidDepositRatio();
         if (bidderToPrice[goodsId].bidder != address(0))
@@ -105,21 +124,26 @@ contract NftAuctionWithDeposit is INftAuction,IERC721Receiver, ReentrancyGuard
         if (msg.sender != NFTMANAGER.ownerOf(goodsId)) revert SellerNotMatch();
 
         //init goods info
+        uint256 start = block.number + lockDuration;
+        uint256 biddl = start + bidDuration;
         goodsInfo[goodsId] = GoodsInfoWithDeposit({
             seller: NFTMANAGER.ownerOf(goodsId),
             tokenId: goodsId,
             startingPrice: initPrice,
-            startLine: block.number + lockDuration, 
-            bidDeadline: block.number + lockDuration + bidDuration, 
-            settleDeadline: block.number + lockDuration + bidDuration + settleDuration, 
+            startLine: start, 
+            bidDeadline: biddl, 
+            settleDuration: settleDuration, 
             depositRatio: depositRatio,
+            cutDownDuration: cutDown,
+            minIncreamentRatio: increament,
             status: AuctionStatus.Active
         });
 
         // init bidder info
         bidderToPrice[goodsId] = BidInfo({
             bidder: address(0),
-            price: initPrice
+            price: initPrice,
+            bidDeadline: biddl
         });
 
         // transfer goods from seller to contract
@@ -142,15 +166,19 @@ contract NftAuctionWithDeposit is INftAuction,IERC721Receiver, ReentrancyGuard
     {
         if (msg.sender == address(0)) revert InvalidBidder();
         if (goodsId == 0) revert InvalidTokenId();
-        if (price == 0) revert InvalidPrice();
+        if(goods.seller==address(0)) revert InvalidSeller();
+        if(bidinfo.bidder==address(0)) revert InvalidBidder();
+        if(msg.sender == bidinfo.bidder) revert CannotConsecutiveBid();
 
         if (msg.sender == goods.seller) revert SellerCannotBid();
         if (goods.status != AuctionStatus.Active || block.number < goods.startLine || block.number >= goods.bidDeadline)
             revert NotInAuctionPeriod();
+
+        if(block.number >= bidinfo.bidDeadline) revert BidCutdownFinished();
         
         uint256 depositAmount = price * goods.depositRatio / 10000;
         if(depositAmount == 0) revert DepositTooSmall();
-        if (price <= bidinfo.price) revert InvalidPrice();
+        if (price < bidinfo.price*(100+goods.minIncreamentRatio)/100) revert InvalidPrice();
     }
 
     function bid(uint256 goodsId, uint256 price) external nonReentrant returns (bool) {
@@ -164,7 +192,8 @@ contract NftAuctionWithDeposit is INftAuction,IERC721Receiver, ReentrancyGuard
         address oldBidder = bidinfo.bidder;        
 
         // update bidder info
-        bidderToPrice[goodsId] = BidInfo({bidder: msg.sender, price: price});
+        uint256 biddl=block.number + goods.cutDownDuration;
+        bidderToPrice[goodsId] = BidInfo({bidder: msg.sender, price: price, bidDeadline: biddl<goods.bidDeadline? biddl:goods.bidDeadline});
         deposit[msg.sender] = depositAmount;
 
         
@@ -206,11 +235,12 @@ contract NftAuctionWithDeposit is INftAuction,IERC721Receiver, ReentrancyGuard
 
     function settle(uint256 goodsId) external nonReentrant returns (bool) {
         GoodsInfoWithDeposit storage goods = goodsInfo[goodsId];
-        if (goods.status != AuctionStatus.Active) revert AuctionAlreadySettled();
-        if (block.number <= goods.bidDeadline) revert GoodsInAucting();
-        if(block.number > goods.settleDeadline) revert SettlementPeriodExpired();
-
         BidInfo memory bidinfo = bidderToPrice[goodsId];
+        if (goods.status != AuctionStatus.Active) revert AuctionAlreadySettled();
+        if (block.number <= bidinfo.bidDeadline) revert GoodsInAucting();
+        if(block.number > bidinfo.bidDeadline + goods.settleDuration) revert SettlementPeriodExpired();
+
+        
         if (msg.sender != bidinfo.bidder) revert NotWinner();
 
         //update goods info
@@ -247,17 +277,19 @@ contract NftAuctionWithDeposit is INftAuction,IERC721Receiver, ReentrancyGuard
 
     function claimPenalty(uint256 goodsId) external nonReentrant {
         GoodsInfoWithDeposit storage goods = goodsInfo[goodsId];
-        
+        BidInfo memory winBid = bidderToPrice[goodsId];
+        address winner = winBid.bidder;
+
         if(msg.sender != goods.seller) revert OnlySeller();
         if(goods.status != AuctionStatus.Active) revert AuctionAlreadySettled();
 
-        if(block.number <= goods.settleDeadline) revert SettlementPeriodActived();
+        if(block.number <= winBid.bidDeadline + goods.settleDuration) revert SettlementPeriodActived();
         
  
         goods.status = AuctionStatus.Defaulted;
         
 
-        address winner = bidderToPrice[goodsId].bidder;
+   
         uint256 forfeitDeposit = deposit[winner];
  
         if (forfeitDeposit > 0) 

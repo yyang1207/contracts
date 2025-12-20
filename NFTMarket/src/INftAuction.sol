@@ -4,20 +4,7 @@ pragma solidity 0.8.30;
 
 interface INftAuction 
 {
-    struct  GoodsInfo 
-    {
-        address seller;
-        uint256 tokenId;
-        uint256 startingPrice;
-        uint256 endTime;
-        bool isEnded;
-    }
-
-    struct BidInfo
-    {
-        address bidder;
-        uint256 price;
-    }
+    
 
     error InvalidEndTime();
     error InvalidBidder();

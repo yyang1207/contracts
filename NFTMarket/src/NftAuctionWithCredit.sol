@@ -9,6 +9,21 @@ import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol
 
 contract NftAuctionWithCredit is INftAuction,IERC721Receiver, ReentrancyGuard {
 
+    struct  GoodsInfo 
+    {
+        address seller;
+        uint256 tokenId;
+        uint256 startingPrice;
+        uint256 endTime;
+        bool isEnded;
+    }
+
+    struct BidInfo
+    {
+        address bidder;
+        uint256 price;
+    }
+
     Weth private immutable weth;
     IERC721 private immutable erc721;
     mapping (uint256 => BidInfo) bidderToPrice; // 场次id=>tokenid=>竞价信息
