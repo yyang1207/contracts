@@ -41,6 +41,17 @@ forge test --match-path test/NftAuctionWithCredit.t.sol
 ```
 
 
+## 部署
+
+```bash
+forge script script/AuctionSystemDeployer.s.sol:AuctionSystemDeployer \
+    --rpc-url $SEPOLIA_RPC_URL \
+    --env-file .env \
+    --broadcast \
+    --verify \
+    -vvvv
+```
+
 
 ## Slither
 
