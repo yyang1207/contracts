@@ -44,6 +44,7 @@ contract NftAuctionWithDeposit is INftAuction,IERC721Receiver, ReentrancyGuard
     mapping(address => uint256) public deposit; // deposit
     uint16 public immutable MAX_DEPOSIT_RATIO; // 30%
     uint16 public immutable MIN_DEPOSIT_RATIO; // 10%
+    uint8 public serviceFeeRatio=1; // 1%
 
     
 
@@ -108,7 +109,9 @@ contract NftAuctionWithDeposit is INftAuction,IERC721Receiver, ReentrancyGuard
         uint16 depositRatio,
         uint16 cutDown,
         uint16 increament
-    ) external returns (bool) {
+    ) external returns (bool) 
+    {
+
         if (initPrice <= 0) revert InvalidPrice();
 
  
@@ -119,8 +122,8 @@ contract NftAuctionWithDeposit is INftAuction,IERC721Receiver, ReentrancyGuard
         if(increament<5) revert InvalidIncreamentRatio();
 
         if (depositRatio < MIN_DEPOSIT_RATIO || depositRatio > MAX_DEPOSIT_RATIO) revert  InvalidDepositRatio();
-        if (bidderToPrice[goodsId].bidder != address(0))
-            revert GoodsAlreadyInAuction();
+        if (depositRatio < serviceFeeRatio) revert InvalidDepositRatio();
+        if (bidderToPrice[goodsId].bidder != address(0)) revert GoodsAlreadyInAuction();
         if (msg.sender != NFTMANAGER.ownerOf(goodsId)) revert SellerNotMatch();
 
         //init goods info
@@ -254,7 +257,9 @@ contract NftAuctionWithDeposit is INftAuction,IERC721Receiver, ReentrancyGuard
         if(depositPaid > 0)
         {
             deposit[msg.sender] = 0;
-            bool succPay = WETH.transfer(goods.seller, depositPaid);
+            uint256 serviceFee = winnerPrice * serviceFeeRatio / 100;
+            uint256 remainingDeposit = depositPaid - serviceFee;
+            bool succPay = WETH.transfer(goods.seller, remainingDeposit);
             if (!succPay) revert PaidDepositFailed();
         }
         if(remainingToPay > 0)
