@@ -1,4 +1,5 @@
 ## 拍卖方案
+
 1.用户设置拍卖起始价格，tokenid，公示期持续区块数,拍卖持续区块数，结算持续区块数，最低竞价增幅，竞价倒计时持续区块数，竞价保证金比例
 2.竞价阶段
     2.1校验当前是否处于竞价阶段，校验竞价是否达到最低增幅要求
@@ -15,6 +16,11 @@
     5.1拍卖方可以在公示期撤回拍卖品
     5.2拍卖方可以在拍卖结束后撤回拍卖品
 
+6.竞价倒计时方案
+
+    6.1.创建拍卖时设置倒计时时长以及首次竞价信息的截止时间
+
+    6.2.每次竞价后，在竞价信息内标记下次竞价的截止时间
 
 
 
@@ -40,7 +46,6 @@ forge build
 forge test --match-path test/NftAuctionWithCredit.t.sol
 ```
 
-
 ## 部署
 
 ```bash
@@ -51,7 +56,6 @@ forge script script/AuctionSystemDeployer.s.sol:AuctionSystemDeployer \
     --verify \
     -vvvv
 ```
-
 
 ## Slither
 
@@ -91,10 +95,4 @@ myth analyze src/NftAuctionWithCredit.sol
 
 
 
-## 竞价倒计时方案
-
-1.创建拍卖时设置倒计时时长以及首次竞价信息的截止时间
-
-2.每次竞价后，在竞价信息内标记下次竞价的截止时间
-
-
+## 

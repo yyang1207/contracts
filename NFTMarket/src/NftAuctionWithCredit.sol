@@ -3,9 +3,10 @@ pragma solidity 0.8.30;
 
 import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";  
 import {IERC721Receiver} from"@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
-import {Weth} from "../src/Weth.sol";
-import {INftAuction} from "../src/INftAuction.sol";
+import {INftAuction,IWETHExtended} from "../src/INftAuction.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+
+
 
 contract NftAuctionWithCredit is INftAuction,IERC721Receiver, ReentrancyGuard {
 
@@ -24,7 +25,7 @@ contract NftAuctionWithCredit is INftAuction,IERC721Receiver, ReentrancyGuard {
         uint256 price;
     }
 
-    Weth private immutable weth;
+    IWETHExtended private immutable weth;
     IERC721 private immutable erc721;
     mapping (uint256 => BidInfo) bidderToPrice; // 场次id=>tokenid=>竞价信息
     mapping (uint256 => GoodsInfo) goodsInfo; // 场次id=>tokenid=>商品信息
@@ -32,7 +33,7 @@ contract NftAuctionWithCredit is INftAuction,IERC721Receiver, ReentrancyGuard {
 
     constructor(address erc721Address,address wethAddress)
     {
-        weth = Weth(wethAddress);
+        weth = IWETHExtended(wethAddress);
         erc721 = IERC721(erc721Address);
     }
 

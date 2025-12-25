@@ -1,0 +1,3 @@
+[submodule "NFTMarket/lib/v2-periphery"]
+	path = NFTMarket/lib/v2-periphery
+	url = https://github.com/uniswap/v2-periphery

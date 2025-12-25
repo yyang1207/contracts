@@ -9,7 +9,7 @@ contract CounterScript is Script {
 
     function setUp() public {}
 
-    function run() public {
+    function run() public returns (address) {
         // 1. 获取私钥 (请务必安全保管)
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
 
@@ -17,10 +17,9 @@ contract CounterScript is Script {
         vm.startBroadcast(deployerPrivateKey);
         counter = new Counter();
 
-        // 3. 保存合约地址
-        vm.saveAddress("counter", address(counter));
-
         // 4. 保存合约部署者私钥
         vm.stopBroadcast();
+
+        return (address(counter));
     }
 }

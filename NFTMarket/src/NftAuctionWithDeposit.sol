@@ -2,8 +2,7 @@
 pragma solidity 0.8.30;
 import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";  
 import {IERC721Receiver} from"@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
-import {Weth} from "../src/Weth.sol";
-import {INftAuction} from "../src/INftAuction.sol";
+import {INftAuction,IWETHExtended} from "../src/INftAuction.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 contract NftAuctionWithDeposit is INftAuction,IERC721Receiver, ReentrancyGuard 
@@ -36,7 +35,7 @@ contract NftAuctionWithDeposit is INftAuction,IERC721Receiver, ReentrancyGuard
         AuctionStatus status;
     }
 
-    Weth private immutable WETH;
+    IWETHExtended private immutable WETH;
     IERC721 private immutable NFTMANAGER;
     mapping(uint256 => BidInfo) bidderToPrice; // tokenid=>
     mapping(uint256 => GoodsInfoWithDeposit) goodsInfo; // tokenid=>
@@ -81,7 +80,7 @@ contract NftAuctionWithDeposit is INftAuction,IERC721Receiver, ReentrancyGuard
         uint16 _minDepositRatio
     ) {
         NFTMANAGER = IERC721(erc721Address);
-        WETH = Weth(wethAddress);
+        WETH = IWETHExtended(wethAddress);
         MAX_DEPOSIT_RATIO = _maxDepositRatio;
         MIN_DEPOSIT_RATIO = _minDepositRatio;
     }
